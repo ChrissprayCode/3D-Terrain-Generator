@@ -4,7 +4,6 @@ using UnityEngine;
 
 public class PoissonNoise : MonoBehaviour
 {
-
     public static List<Vector2> GenPoissonNoise(int width, int height, float radius)
     {
         width -= 1;
