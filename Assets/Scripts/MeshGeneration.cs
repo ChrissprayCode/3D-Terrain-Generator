@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+//Add mesh collider
 public class MeshGeneration
 {
     public int[] triangles;

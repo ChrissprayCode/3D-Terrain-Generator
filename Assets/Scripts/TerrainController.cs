@@ -15,6 +15,7 @@ public class TerrainController : MonoBehaviour
     public MeshGeneration meshGen = new MeshGeneration();
 
     //Perlin Noise variables
+    [Header("Perlin Noise")]
     [Min(0)] public int seed;
     [Range (20f, 70f)]public float scale;
     [Range (1,10)]public int octaves;
@@ -25,12 +26,14 @@ public class TerrainController : MonoBehaviour
     [Range(2f, 5f)] public float curve;
 
     //Colouring
+    [Header("Colouring")]
     public Gradient gradient;
     public gradientFilter ColourType;
     string enumResult;
     Color[] gradientColour = new Color[chunkSize * chunkSize]; //make new colour array the size of the map
 
     //Trees
+    [Header("Trees")]
     public bool spawnTrees;
     public int forestStartKey;
     public int forestEndKey;
@@ -60,6 +63,7 @@ public class TerrainController : MonoBehaviour
         {
             DestroyTrees();
         }
+
     }
 
     public void ColourMap(float[,] noiseMap)
@@ -127,28 +131,47 @@ public class TerrainController : MonoBehaviour
     {
         DestroyTrees();
 
+        //get the spawn points
         List<Vector2> points = PoissonNoise2.GeneratePoints(radius, new Vector2(127, 127), rejectionCount);
+
+        
+        SpawnTree(tree, points);
+
+    }
+
+    void SpawnTree(GameObject tree, List<Vector2> points)
+    {
+
 
         foreach (var point in points)
         {
-            //FIND OUT HOW TO CHANGE THE HEIGHT TO MESH HEIGHT
-            Instantiate(tree, new Vector3(point.x, 0, point.y), Quaternion.Euler(270, Random.Range(0f, 360f), 0));
+            Vector3 pointPos = new Vector3(point.x, 30, point.y);
+
+            Ray ray = new Ray(pointPos, Vector3.down * 30);
+            RaycastHit hit;
+            float spawnY = 0;
+
+            if (Physics.Raycast(ray, out hit))
+            {
+                spawnY = hit.point.y;
+            }
+
+            Instantiate(tree, new Vector3(point.x, spawnY, point.y), Quaternion.Euler(270, Random.Range(0f, 360f), 0));          
         }
 
+        //get all trees and parent them under an empty obj
         var spawnedTrees = GameObject.FindGameObjectsWithTag("tree");
         foreach (var newTree in spawnedTrees)
         {
             float size = Random.Range(7f, 15f);
             newTree.gameObject.transform.localScale = new Vector3(size, size, size);
             newTree.transform.parent = treeParent.transform;
-            Debug.Log("Pog");
         }
-
     }
 
 
-    /*
-    void PlaceTrees(int width, int height, int forestStart, int forestEnd, GameObject tree, float[,] noiseMap)
+    
+    void PlaceTrees(int width, int height, int forestStart, int forestEnd, GameObject tree, float[,] noiseMap, List<Vector2> points)
     {
         DestroyTrees();
 
@@ -172,10 +195,6 @@ public class TerrainController : MonoBehaviour
             forestEnd = forestStart + 1;
         }
 
-        //List<Vector2> poissonList = PoissonNoise.GenPoissonNoise(chunkSize, chunkSize, forestDensity); //create list of tree positions from poisson noise
-        //poissonList = PoissonNoise2.GeneratePoints(radius,new Vector2(chunkSize,chunkSize),30); //create list of tree positions from poisson noise
-
-        
         int treeCounter = 0;//start tree counter
 
 
@@ -194,9 +213,9 @@ public class TerrainController : MonoBehaviour
                 }
 
                 //create new array for each tree location based on poisson list
-                if (treeCounter < poissonList.Count)
+                if (treeCounter < points.Count)
                 {
-                    treeLocations[counter] = new Vector3(poissonList[treeCounter].x, noiseMap[x, y] * heightMultiplier, poissonList[treeCounter].y);
+                    treeLocations[counter] = new Vector3(points[treeCounter].x, noiseMap[x, y] * heightMultiplier, points[treeCounter].y);
                     treeCounter++;
                 }
 
@@ -225,5 +244,5 @@ public class TerrainController : MonoBehaviour
             newTree.transform.parent = treeParent.transform;
         }
     }
-    */
+    
 }
