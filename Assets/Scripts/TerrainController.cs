@@ -13,6 +13,7 @@ public class TerrainController : MonoBehaviour
     public GameObject treeParent;
     public GameObject tree;
     public MeshGeneration meshGen = new MeshGeneration();
+    public GameObject meshObj;
 
     //Perlin Noise variables
     [Header("Perlin Noise")]
@@ -37,7 +38,7 @@ public class TerrainController : MonoBehaviour
     public bool spawnTrees;
     public int forestStartKey;
     public int forestEndKey;
-    [Range(1f, 10f)] public float radius = 5;
+    [Range(1f, 2f)] public float radius = 1.5f;
     public int rejectionCount = 30;
 
     [System.Serializable]
@@ -53,7 +54,17 @@ public class TerrainController : MonoBehaviour
         ColourMap(noiseMap); //colour the noise map
         
         Mesh mesh = meshGen.GenMesh(noiseMap, heightMultiplier, meshSimplificationLevel); //make a mesh with the noisemap
+
+        //Clear old mesh and make new
+        if (meshObj.TryGetComponent(typeof(MeshCollider), out Component comp))
+        {
+            DestroyImmediate(comp);
+        }
+        
         meshFilter.sharedMesh = mesh; //assign the mesh to filtered mesh so it can be shown in editor
+        var possibleMeshCol = meshObj.AddComponent<MeshCollider>();
+        meshFilter.sharedMesh = possibleMeshCol.sharedMesh;
+
 
         //spawn trees if chosen to
         if (spawnTrees) {
@@ -131,16 +142,39 @@ public class TerrainController : MonoBehaviour
     {
         DestroyTrees();
 
+        float maxHeight = 0;
+        float minHeight = -10;
+
         //get the spawn points
         List<Vector2> points = PoissonNoise2.GeneratePoints(radius, new Vector2(127, 127), rejectionCount);
 
-        
-        SpawnTree(tree, points);
+
+        //catch max and minimum height
+        for (int x = 0; x < width; x += meshSimplificationLevel)
+        {
+            
+            for (int y = 0; y < height; y += meshSimplificationLevel)
+            {
+                if (noiseMap[x, y] * heightMultiplier > maxHeight)
+                {
+                    maxHeight = noiseMap[x, y] * heightMultiplier;
+                }
+                else if (noiseMap[x, y] * heightMultiplier < minHeight)
+                {
+                    minHeight = noiseMap[x, y] * heightMultiplier;
+                }
+            }
+        }
+
+        SpawnTree(tree, points, minHeight, maxHeight, forestStart, forestEnd);
 
     }
 
-    void SpawnTree(GameObject tree, List<Vector2> points)
+    void SpawnTree(GameObject tree, List<Vector2> points, float minHeight, float maxHeight, int forestStart, int forestEnd)
     {
+        //create an array for gradient keys
+        GradientColorKey[] gradKeys;
+        gradKeys = gradient.colorKeys;
 
 
         foreach (var point in points)
@@ -156,7 +190,13 @@ public class TerrainController : MonoBehaviour
                 spawnY = hit.point.y;
             }
 
-            Instantiate(tree, new Vector3(point.x, spawnY, point.y), Quaternion.Euler(270, Random.Range(0f, 360f), 0));          
+            //normalise spawnY
+            float normalisedSpawnY = ((spawnY - minHeight) / (maxHeight - minHeight));
+
+            if (normalisedSpawnY > gradKeys[forestStart].time && normalisedSpawnY < gradKeys[forestEnd].time)
+            {
+                Instantiate(tree, new Vector3(point.x, spawnY, point.y), Quaternion.Euler(270, Random.Range(0f, 360f), 0));
+            }
         }
 
         //get all trees and parent them under an empty obj
