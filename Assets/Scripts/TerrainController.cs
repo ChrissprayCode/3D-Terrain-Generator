@@ -32,6 +32,7 @@ public class TerrainController : MonoBehaviour
     public gradientFilter ColourType;
     string enumResult;
     Color[] gradientColour = new Color[chunkSize * chunkSize]; //make new colour array the size of the map
+    
 
     //Trees
     [Header("Trees")]
@@ -40,6 +41,9 @@ public class TerrainController : MonoBehaviour
     public int forestEndKey;
     [Range(1f, 2f)] public float radius = 1.5f;
     public int rejectionCount = 30;
+
+    public float treeLowSpawn = 1f;
+    public float treeHighSpawn = 30f;
 
     [System.Serializable]
     public enum gradientFilter
@@ -166,7 +170,7 @@ public class TerrainController : MonoBehaviour
             }
         }
 
-        SpawnTree(tree, points, minHeight, maxHeight, forestStart, forestEnd);
+        SpawnTree2(tree, points, minHeight, maxHeight, forestStart, forestEnd);
 
     }
 
@@ -203,14 +207,48 @@ public class TerrainController : MonoBehaviour
         var spawnedTrees = GameObject.FindGameObjectsWithTag("tree");
         foreach (var newTree in spawnedTrees)
         {
-            float size = Random.Range(7f, 15f);
+            float size = Random.Range(0.2f, 0.5f);
+            newTree.gameObject.transform.localScale = new Vector3(size, size, size);
+            newTree.transform.parent = treeParent.transform;
+        }
+    }
+
+    void SpawnTree2(GameObject tree, List<Vector2> points, float minHeight, float maxHeight, int forestStart, int forestEnd)
+    {
+
+        foreach (var point in points)
+        {
+            Vector3 pointPos = new Vector3(point.x, 30, point.y);
+
+            Ray ray = new Ray(pointPos, Vector3.down * 30);
+            RaycastHit hit;
+            float spawnY = 0;
+
+            if (Physics.Raycast(ray, out hit) && hit.transform.tag == "ground")
+            {
+                spawnY = hit.point.y;
+            }
+
+            //normalise spawnY
+            float normalisedSpawnY = ((spawnY - minHeight) / (maxHeight - minHeight));
+
+            if (normalisedSpawnY > treeLowSpawn && normalisedSpawnY < treeHighSpawn)
+            {
+                Instantiate(tree, new Vector3(point.x, spawnY, point.y), Quaternion.Euler(270, Random.Range(0f, 360f), 0));
+            }
+        }
+
+        //get all trees and parent them under an empty obj
+        var spawnedTrees = GameObject.FindGameObjectsWithTag("tree");
+        foreach (var newTree in spawnedTrees)
+        {
+            float size = Random.Range(0.2f, 0.5f);
             newTree.gameObject.transform.localScale = new Vector3(size, size, size);
             newTree.transform.parent = treeParent.transform;
         }
     }
 
 
-    
     void PlaceTrees(int width, int height, int forestStart, int forestEnd, GameObject tree, float[,] noiseMap, List<Vector2> points)
     {
         DestroyTrees();
